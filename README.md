@@ -11,7 +11,8 @@ get back an object to control the stream;
 
 ```javascript
 
-	var objConfig={ 
+//set config
+ var objConfig={ 
      type:'websocket'
     ,addr:'wss://ws.blockchain.info/inv'
     ,sendOnConnect:'{"op":"unconfirmed_sub"}'
@@ -19,6 +20,7 @@ get back an object to control the stream;
     ,fnResults=function(results){ console.log(results); }
   }
   
+  //instantiate
   var objStream = new metaStream(objConfig);
   
   // go
