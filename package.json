@@ -1,0 +1,24 @@
+{
+  "name": "metastream",
+  "version": "1.0.0",
+  "description": "abstraction of streaming technologies",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SuddenDevelopment/metastream.git"
+  },
+  "keywords": [
+    "streaming",
+    "websocket",
+    "polling"
+  ],
+  "author": "Anthony Aragues",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/SuddenDevelopment/metastream/issues"
+  },
+  "homepage": "https://github.com/SuddenDevelopment/metastream#readme"
+}
