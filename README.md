@@ -1,6 +1,18 @@
 # metastream
 abstraction library to normalize data streaming types and give them a common interface
 
+supported streaming:
+1. websocket
+2. pubnub
+3. socket.io
+4. pusher
+5. sock.js
+6. http json stream
+
+adapted streaming
+1. api polling
+2. csv stream
+
 todo:
 
 1. abstract out of ohm.ai
