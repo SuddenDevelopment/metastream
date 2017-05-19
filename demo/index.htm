@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html ng-app="appMain">
+<head>
+	<title> MetaStream Demo</title>
+	 <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/angular-material/1.1.1/angular-material.min.css">
+	<style>
+		html,body{margin:0;padding:0;}
+	</style>
+</head>
+<body ng-controller='controllerMain'>
+
+<div layout="row">
+	<div layout="column" flex="50">
+		Source 1
+		<div layout="row">
+			<md-input-container>
+              <label>Select a Source</label>
+              <md-select ng-model="tmp.source1">
+                <md-option ng-repeat="obj in menu.sources" ng-value="obj.config">{{ obj.source }}</md-option>
+              </md-select>
+            </md-input-container>
+            <md-button ng-click="fnConfig(tmp.source1)" class="md-raised md-default">Config</md-button>
+			<md-button ng-click="fnGo(source1)" class="md-raised md-primary">Go</md-button>
+			<md-button ng-click="fnStop(source1)" class="md-raised md-warn">Stop</md-button>
+		</div>
+		<div ng-repeat="objMsg in source1.data">
+			<pre> {{objMsg}} </pre>
+		</div>
+	</div>
+	<div layout="column" flex="50">
+		Source 2
+		<div layout="row">
+			<md-input-container>
+              <label>Select a Source</label>
+              <md-select ng-model="tmp.source2">
+                <md-option ng-repeat="obj in menu.sources" ng-value="obj.config">{{ obj.source }}</md-option>
+              </md-select>
+            </md-input-container>
+            <md-button ng-click="fnConfig(tmp.source2)" class="md-raised md-default">Config</md-button>
+			<md-button ng-click="fnGo(source2)" class="md-raised md-primary">Go</md-button>
+			<md-button ng-click="fnStop(source2)" class="md-raised md-warn">Stop</md-button>
+		</div>
+		<div ng-repeat="objMsg in source2.data">
+			<pre> {{objMsg}} </pre>
+		</div>
+	</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/angular.js/1.6.1/angular.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/angular.js/1.6.1/angular-animate.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/angular.js/1.6.1/angular-aria.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/angular-material/1.1.1/angular-material.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.4/lodash.min.js"></script>
+<!-- include client libraries -->
+<script type="text/javascript" src="//js.pusher.com/2.2/pusher.min.js"></script>
+<script type="text/javascript" src="//cdn.pubnub.com/pubnub.min.js"></script>
+<!-- This is the metastream library, it can detect which stream libraries are included -->
+<script src="../index.js"></script>
+<script>
+
+// similar to this but for more libraries: http://rltmjs.com/
+
+var app = angular.module('appMain', ['ngMaterial']).config(function($mdThemingProvider) {
+	  $mdThemingProvider.theme('default').dark();
+	});
+app.controller('controllerMain', function($scope) {
+	//generic object to hold temporary things for form selections
+	$scope.tmp={};
+	//generic object that holds form optiosn
+	$scope.menu={};
+
+/*
+		{name:'reddit',type:'pusher',addr:'50ed18dd967b455393ed',auth:'',splitPath:'', events:['new-listing'],eventPath:'',channels:['AskReddit','politics','funny','worldnews','pics','news','videos','gifs']}
+      ,{name:'wikimedia',type:'socketio',addr:'https://stream.wikimedia.org/rc'}
+      ,{name:'twitter',type:'pubnub',addr:'sub-c-78806dd4-42a6-11e4-aed8-02ee2ddab7fe',channels:['pubnub-twitter']}
+      ,{name:'CyberAttacks',type:'sockjs',addr:'https://mhn.threatstream.com:8443/data'}
+      ,{name:'BlockChain Transactions',type:'websocket',addr:'wss://ws.blockchain.info/inv',sendOnConnect:'{"op":"unconfirmed_sub"}'}
+      json-stream = https://developer.shodan.io/api/stream 0ZM3HtWOz5qGkQPZL8SjSuaj7IIearmT    
+*/
+
+	//these hold the individual configs that work with metastream. each config should be able to be passed to metastream to make a connection and get data
+	$scope.menu.sources=[
+		 {"source":'pubnub',"config":{}}
+		,{"source":'pusher',"config":{}}
+		,{"source":'satori',"config":{}}
+		,{"source":'json-stream',"config":{}}
+		,{"source":'websocket',"config":{}}
+		,{"source":'signalr',"config":{}}
+		,{"source":'sockjs',"config":{}}
+	];
+
+	
+
+	//these hold the current configs, metastream object instances and data for the sources
+	$scope.source1={"id":"source1"};
+	$scope.source2={"id":"source2"};
+
+	//these hold the data for the sources, keep them trimmed to 20 for demo/memory purposes
+	$scope.source1.data=[];
+	$scope.source2.data=[];
+
+	//this is called with the config object passed in to metastream
+	$scope.fnConfig=function(objSource,objConfig){
+		//objSource is just the source 1 or source 2 objects above to put data into
+		//strSource is "source1" or "source2"
+
+		objSource.config=objConfig;
+
+		//while the stuff to get connected is in the config, te functions to pass in are not, and are added here.
+		objConfig.fnResults=$scope.fnOnMessage;
+
+		//setting some sort of reference inside the config helps later when multiple streams are running
+		objConfig.id=objSource.id;
+
+		//this MAY be conbined with config, tie a variable to a metastream instance, I dont know if this syntax will work, it's just an example can be modified
+		objSource.stream= new libMetaStream.init(objConfig);
+
+		//set the config for the stream object in metastream
+		objSource.config(objConfig);
+	};
+	$scope.fnStop=function(objSource){
+		objSource.stop();
+	};
+	$scope.fnGo=function(objSource){
+		objSource.go();
+	};
+	$scope.fnChangeSource=function(objSource,objConfig){
+		$scope.stop(objSource);
+		$scope.fnConfig(objSource,objConfig);
+		$scope.go(objSource);
+	};
+	$scope.fnOnMessage=function(objMessage,objConfig){
+		//by passing the config or at least parts of it back in with the message
+
+		$scope[objConfig.id].data.push(objMessage);
+
+		//trim for demo purposes
+		if($scope[objConfig.id].data.length>20){
+			$scope[objConfig.id].data.pop();
+		}
+	};
+});
+</script>
+</body>
+</html>
