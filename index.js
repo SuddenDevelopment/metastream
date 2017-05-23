@@ -1,5 +1,11 @@
-if (typeof window === 'undefined'){var utils = require('suddenutils'); var _ = new utils();
 var metastream = function(objConfig){
+	'use strict';
+	//----====|| REQUIREMENTS ||====----\\
+	/*
+		1. abstract streaming protocols and methods so tools can be applied across data from all of them
+		2. Config (with channels), Connect,Sendonconnect, reconnect, go, stop, onResults, send (when available)
+		3. This is the browser version. browser and node versions are separate but share common properties and methods
+	*/
 	//----====|| LOGIC ||====----\\
 	//clean input vars
 		//requesting a lib that exists
@@ -7,139 +13,110 @@ var metastream = function(objConfig){
 		//apply defaults
 	//decide which lib is used to send back normalized functions
 	//send error with the lib does not have the proper supporting files loaded
+	/*
+	 var objConfig={ 
+	     type:'websocket'
+	    ,addr:'wss://ws.blockchain.info/inv'
+	    ,sendOnConnect:'{"op":"unconfirmed_sub"}'
+	    ,channels:['pubnub-twitter']
+	    ,fnResults=function(results){ console.log(results); }
+	    ,fReconnect=true
+	  }
+	*/
+	//keep a list of allowed protocols and their defaults
+	this.objProtocols={'websocket':{}};
+	this.type='websocket';
+	this.addr='ws://localhost:8080';
+	this.objConfig=objConfig;
+	if(typeof objConfig.id !== 'undefined'){ this.id=objConfig.id; }
+	if(typeof this.objProtocols[objConfig.type] !== 'undefined'){ this.type=objConfig.type; }
+	if(typeof objConfig.addr !== 'undefined'){ this.addr=objConfig.addr; }
+	if(typeof objConfig.fnResults !== 'undefined'){ this.fnResults=objConfig.fnResults; }
+	   else{ this.fnResults=function(objMessage){ console.log(objMessage); } }
 
-	//----====|| PUSHER ||====----\\
-	objSource.pusher={
-	  // https://pusher.com/docs/client_api_guide
-	   go: function(objSrc){
-	    $scope.objFeed[objSrc.name] = new Pusher( objSrc.addr );
-	      //subscribe to all channels defined
-	      _.for(objSrc.channels,function(v,k){
-	        $scope.objFeed[objSrc.name].subscribe(v);
-	      });
-	      //subscribe to all events defined
-	      _.for(objSrc.events,function(v,k){
-	        $scope.objFeed[objSrc.name].bind(v,function(objData){ fnFieldMaps(objSrc,objData); });
-	      });
-	      $scope.objFeed[objSrc.name].connection.bind('disconnected',function(){ objSrc.state='stopped'; });
-	   }
-	  ,stop: function(objSrc){ $scope.objFeed[objSrc.name].disconnect(); }
-	};
-	//----====|| PUBNUB ||====----\\
-	objSource.pubnub={
-	   // https://www.pubnub.com/docs/web-javascript/api-reference
-	   go: function(objSource){
-	    if(typeof PUBNUB !== 'undefined'){
-	      $scope.objFeed[objSource.name] = PUBNUB.init({subscribe_key:objSource.addr});
-	      _.for(objSource.channels,function(v,k){
-	        $scope.objFeed[objSource.name].subscribe({channel:v,message:function(objData){ fnFieldMaps(objSource,objData); }});
-	      });
-	    }
-	   }
-	  ,stop: function(objSource){ 
-	    _.for(objSource.channels,function(v,k){
-	        $scope.objFeed[objSource.name].unsubscribe({channel:v,message:function(objData){ fnFieldMaps(objSource,objData); }});
-	      });
-	  }
-	};
-	//----====|| WEBSOCKET ||====----\\
-	objSource.websocket={
-	   go: function(objSrc){
-	    $scope.objFeed[objSrc.name] = new WebSocket(objSrc.addr);
-	      $scope.objFeed[objSrc.name].onopen=function(){
-	        if(objSrc.sendOnConnect && objSrc.sendOnConnect !== ''){
-	          $scope.objFeed[objSrc.name].send(objSrc.sendOnConnect);
-	        } 
-	      };
-	      $scope.objFeed[objSrc.name].onmessage=function(objData){ 
-	        fnFieldMaps(objSrc,JSON.parse(objData.data));
-	      };
-	      $scope.objFeed[objSrc.name].onerror=function(strError){ objSrc.state='error: '+strError; };
-	      $scope.objFeed[objSrc.name].onclose=function(strError){ objSrc.state='stopped'; };
-	   }
-	  ,stop: function(objSrc){ $scope.objFeed[objSrc.name].close(); }
-	};
-	//----====|| SOCKSJS ||====----\\
-	objSource.sockjs={
-	  //https://github.com/sockjs/sockjs-client
-	   go: function(objSrc){
-	    $scope.objFeed[objSrc.name] = new SockJS(objSrc.addr);
-	       $scope.objFeed[objSrc.name].onopen = function() {
-	           if(objSrc.sendOnConnect && objSrc.sendOnConnect !== ''){
-	          $scope.objFeed[objSrc.name].send(objSrc.sendOnConnect);
-	        } 
-	       };
-	      $scope.objFeed[objSrc.name].onerror=function(strError){ objSrc.state='error: '+strError; };
-	      $scope.objFeed[objSrc.name].onclose=function(strError){ objSrc.state='stopped'; };
-	    $scope.objFeed[objSrc.name].onmessage = function(objData) { fnFieldMaps(objSrc,JSON.parse(objData.data)); };
-	   }
-	  ,stop: function(objSrc){ $scope.objFeed[objSrc.name].close(); }
-	};
-	//----====|| SOCKETIO ||====----\\
-	objSource.socketio={
-	   go: function(objSource){
-	    $scope.objFeed[objSource.name] = io.connect(objSource.addr,{reconnect:true});
-	      $scope.objFeed[objSource.name].on('connect', function() { 
-	        if(objSource.hasOwnProperty('channels') && objSource.channels.length > 0){
-	          _.for(objSource.channels,function(v,k){
-	            $scope.objFeed[objSource.name].emit('subscribe', v);
-	          });
-	        }else{ $scope.objFeed[objSource.name].emit('subscribe', '*'); }
-	      });
-	      //add subscriptions to channels, handle the events
-	      $scope.objFeed[objSource.name].on('change', function(objData) { fnFieldMaps(objSource,objData); });
-	      $scope.objFeed[objSource.name].on('reconnect', function(objData) { $scope.notifications.push('reconnecting: ' + objSource.name); });
-	   }
-	  ,stop: function(objSource){ 
-	    //socket.io changed a lot through versions
-	    $scope.objFeed[objSource.name].emit('unsubscribe', '*');
-	    if(typeof $scope.objFeed[objSource.name].disconnect() !== undefined){ $scope.objFeed[objSource.name].disconnect(); }
-	    else if(typeof $scope.objFeed[objSource.name].close() !== undefined){ $scope.objFeed[objSource.name].close(); }
-	  }
-	};
-	//----====|| API POLLING ||====----\\
-	objSource.api={
-	  go: function(objSource){
-	    var objConfig=objSource.api;
-	    if(!objConfig.hasOwnProperty('url') || objConfig.url===''){objConfig.url=objSource.addr;}
-	    objConfig.fnCall=function(){ 
-	      
+	//hold the object that is returned by whatever protocol we are running in this instance
+	this.objProtocol={};
+	//keep the status for easy reference, connecting, connected, disconnected, streaming, error
+	this.state='disconnected';
+	//check if the pre-requisite libraries can be found for the protocol selected, need to load pubnub before using pubnub in this lib
 
-	      var objHeaders={'Content-Type':'text/plain'};
-	      if(!objConfig.hasOwnProperty('col')){objConfig.col=objData._column+'.api';}
-	      if(objConfig.hasOwnProperty('headers') && objConfig.headers.length > 0){ 
-	        _.for(objConfig.headers,function(v,k){
-	          objHeaders[k]=v;
-	        });
-	      }
-	      //translate all of the item data into parameters for the API call
-	      var objAPIData={};
-	      if(objConfig.hasOwnProperty('data') && objConfig.data.length > 1){
-	        _.for(objConfig.data,function(v,k){
-	          //if(!v.hasOwnProperty('dstKey') && v.hasOwnProperty('srcPath')){v.dstKey=v.srcPath;}
-	          if(v.hasOwnProperty(value) && v.value !== ''){ objAPIData[v.dstKey]=v.val; }
-	          else{ objAPIData[v.dstKey]=_.get(objData,v.srcPath); }
-	        });
-	      }
-	      $http({
-	        method: objConfig.method
-	        ,url: objConfig.url
-	        ,headers: objHeaders
-	        ,data: objAPIData
-	      }).then(function(response){ $scope.objFeed[objSource.name].process(response.data.data); });
+	var self=this;
+	this.go=function(){
+	  //becasue these are dynamically called, each abstratced lib needs to have the same numer of params for each function  
+	  //detect if connected, connect if not
+	  if(self.state==='disconnected'){ self[self.type].connect(); }
+	  self[self.type].go();
+	};
+	this.stop=function(){ self[self.type].stop(); };
+	this.send=function(){ self[self.type].send(); };
+
+	//----====|| websocket||====----\\
+	this.websocket={
+	   connect: function(){
+	   	  self.objProtocol = new WebSocket(self.addr);
+	   	  self.state='connecting';
+	   	  //send first message if configured, sometimes used for auth or subscribtions
+	   	  self.objProtocol.onopen=function(){
+	   	  	self.state='connected';
+	   	  	if(typeof objConfig.sendOnConnect !== 'undefined'){this.send(objConfig.sendOnConnect);}
+	   	  } 
+	   },go: function(){
+	      self.objProtocol.onmessage=this.onMsg;
+	      self.objProtocol.onerror=self.fnError;
+	      self.objProtocol.onclose=function(){
+	      	self.state='disconnected';
+	      	if(typeof objConfig.fnClose !== 'undefined'){this.fnClose;}
+	      };
+	   },stop: function(){ 
+	   	  self.objProtocol.close(); 
+	   },send:function(objMessage,strChannel){
+	   	  self.objProtocol.send(objMessage);
+	   },onMsg:function(objMsg){
+	   	  self.state='streaming';
+	   	  self.fnResults(objMsg,objConfig);
+	   }
+	};
+	//----====|| satori ||====----\\
+	this.satori={
+	   connect: function(){
+	   	  
+	   },go: function(objSrc){
 	      
-	      //return 'stuff\nandmorestuff\nandjunk';
-	    };
-	    objConfig.fnEvent=function(objData){
-	      objData._column=objSource.api.col;
-	      fnFieldMaps(objSource,objData);
-	    };
-	    $scope.objFeed[objSource.name]=new api2stream(objConfig);
-	    $scope.objFeed[objSource.name].fnFirstResults();
-	  }
-	  ,stop: function(objSource){ $scope.objFeed[objSource.name].fnStop(); }
-	}
-	//----====|| CSV PAPAPARSE ||====----\\
+	   },stop: function(objSrc){ 
+	   	   
+	   },send:function(objMessage,strChannel){
+	   	  
+	   }
+	};
+	//----====|| pubnub ||====----\\
+	//----====|| pusher ||====----\\
+	//----====|| socket.io ||====----\\
+	//----====|| satori ||====----\\
+	//----====|| sockjs ||====----\\
+	//----====|| json stream ||====----\\
+	//----====|| signalr, no jquery ||====----\\
+	//----====|| electron IPC ||====----\\
+	//IPC is primarily for use in Electron, it can allow the node components to get the data and this just proxies the commands
+	this.ipc={
+		/*
+			// In renderer process (web page).  https://github.com/electron/electron/blob/master/docs/api/ipc-main.md
+			const {ipc} = require('electron')
+			console.log(ipc.sendSync('synchronous-message', 'ping')) // prints "pong"
+
+			ipc.on('asynchronous-reply', (event, arg) => {
+			  console.log(arg) // prints "pong"
+			})
+			ipc.send('asynchronous-message', 'ping')
+		*/
+	    connect: function(){ 
+	    	if(typeof self.objProtocol === 'undefined'){ self.objProtocol = require('electron'); }
+	    	ipc.send({"action":'connect',"config":self.objConfig}); 
+	   },go:function(objSrc){ ipc.send({"action":'go',"config":self.objConfig}); }
+	   ,stop:function(objSrc){ ipc.send({"action":'stop',"config":self.objConfig}); }
+	   ,send:function(objMessage,strChannel){ ipc.send({"action":'send',"config":self.objConfig,"data":{"msg":objMessage,"chan":strChannel}}); }
+	   ,onMsg:function(objMsg){
+	   	  self.state='streaming';
+	   	  self.fnResults(objMsg,objConfig);
+	   }
+	};
 }
-
-if (typeof module !== 'undefined' && module.exports){module.exports = metastream;}

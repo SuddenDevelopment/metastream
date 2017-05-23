@@ -11,36 +11,36 @@
 
 <div layout="row">
 	<div layout="column" flex="50">
-		Source 1
+		Source 1 : {{source1.stream.state}}
 		<div layout="row">
 			<md-input-container>
               <label>Select a Source</label>
               <md-select ng-model="tmp.source1">
-                <md-option ng-repeat="obj in menu.sources" ng-value="obj.config">{{ obj.source }}</md-option>
+                <md-option ng-repeat="obj in menu.sources track by $index" ng-value="obj.config">{{ obj.source }}</md-option>
               </md-select>
             </md-input-container>
-            <md-button ng-click="fnConfig(tmp.source1)" class="md-raised md-default">Config</md-button>
+            <md-button ng-click="fnConfig(source1,tmp.source1)" class="md-raised md-default">Config</md-button>
 			<md-button ng-click="fnGo(source1)" class="md-raised md-primary">Go</md-button>
 			<md-button ng-click="fnStop(source1)" class="md-raised md-warn">Stop</md-button>
 		</div>
-		<div ng-repeat="objMsg in source1.data">
+		<div ng-repeat="objMsg in source1.data" style="overflow-x:hidden;">
 			<pre> {{objMsg}} </pre>
 		</div>
 	</div>
 	<div layout="column" flex="50">
-		Source 2
+		Source 2 : {{source2.stream.state}}
 		<div layout="row">
 			<md-input-container>
               <label>Select a Source</label>
               <md-select ng-model="tmp.source2">
-                <md-option ng-repeat="obj in menu.sources" ng-value="obj.config">{{ obj.source }}</md-option>
+                <md-option ng-repeat="obj in menu.sources track by $index" ng-value="obj.config">{{ obj.source }}</md-option>
               </md-select>
             </md-input-container>
-            <md-button ng-click="fnConfig(tmp.source2)" class="md-raised md-default">Config</md-button>
+            <md-button ng-click="fnConfig(source2,tmp.source2)" class="md-raised md-default">Config</md-button>
 			<md-button ng-click="fnGo(source2)" class="md-raised md-primary">Go</md-button>
 			<md-button ng-click="fnStop(source2)" class="md-raised md-warn">Stop</md-button>
 		</div>
-		<div ng-repeat="objMsg in source2.data">
+		<div ng-repeat="objMsg in source2.data" style="overflow-x:hidden;">
 			<pre> {{objMsg}} </pre>
 		</div>
 	</div>
@@ -80,11 +80,13 @@ app.controller('controllerMain', function($scope) {
 
 	//these hold the individual configs that work with metastream. each config should be able to be passed to metastream to make a connection and get data
 	$scope.menu.sources=[
-		 {"source":'pubnub',"config":{}}
+		 {"source":'websocket, localhost:8080',"config":{"type":'websocket',"addr":'ws://localhost:8080'}}
+		,{"source":'BlockChain Transactions',"config":
+			{"type":'websocket',"addr":'wss://ws.blockchain.info/inv',"sendOnConnect":'{"op":"unconfirmed_sub"}'}}
+		,{"source":'pubnub',"config":{}}
 		,{"source":'pusher',"config":{}}
 		,{"source":'satori',"config":{}}
 		,{"source":'json-stream',"config":{}}
-		,{"source":'websocket',"config":{}}
 		,{"source":'signalr',"config":{}}
 		,{"source":'sockjs',"config":{}}
 	];
@@ -100,7 +102,19 @@ app.controller('controllerMain', function($scope) {
 	$scope.source2.data=[];
 
 	//this is called with the config object passed in to metastream
+	$scope.fnOnMessage=function(objMessage,objConfig){
+		//console.log('fnOnMessage',objMessage,objConfig);
+		//by passing the config or at least parts of it back in with the message
+		$scope[objConfig.id].data.push(objMessage.data);
+
+		//trim for demo purposes
+		if($scope[objConfig.id].data.length>20){
+			$scope[objConfig.id].data.shift();
+		}
+		$scope.$evalAsync();
+	};
 	$scope.fnConfig=function(objSource,objConfig){
+		//console.log('fnConfig',objSource,objConfig);
 		//objSource is just the source 1 or source 2 objects above to put data into
 		//strSource is "source1" or "source2"
 
@@ -108,37 +122,30 @@ app.controller('controllerMain', function($scope) {
 
 		//while the stuff to get connected is in the config, te functions to pass in are not, and are added here.
 		objConfig.fnResults=$scope.fnOnMessage;
+		//objConfig.fnResults=function(msg){console.log(msg);}
 
 		//setting some sort of reference inside the config helps later when multiple streams are running
 		objConfig.id=objSource.id;
 
 		//this MAY be conbined with config, tie a variable to a metastream instance, I dont know if this syntax will work, it's just an example can be modified
-		objSource.stream= new libMetaStream.init(objConfig);
+		objSource.stream= new metastream(objConfig);
 
 		//set the config for the stream object in metastream
-		objSource.config(objConfig);
+		//objSource.stream.config(objConfig);
 	};
 	$scope.fnStop=function(objSource){
-		objSource.stop();
+		objSource.stream.stop();
 	};
 	$scope.fnGo=function(objSource){
-		objSource.go();
+		//console.log('fnGo',objSource);
+		objSource.stream.go();
 	};
 	$scope.fnChangeSource=function(objSource,objConfig){
-		$scope.stop(objSource);
-		$scope.fnConfig(objSource,objConfig);
-		$scope.go(objSource);
+		$scope.stream.stop(objSource);
+		$scope.stream.fnConfig(objSource,objConfig);
+		$scope.stream.go(objSource);
 	};
-	$scope.fnOnMessage=function(objMessage,objConfig){
-		//by passing the config or at least parts of it back in with the message
-
-		$scope[objConfig.id].data.push(objMessage);
-
-		//trim for demo purposes
-		if($scope[objConfig.id].data.length>20){
-			$scope[objConfig.id].data.pop();
-		}
-	};
+	
 });
 </script>
 </body>

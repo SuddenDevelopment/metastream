@@ -31,6 +31,8 @@ get back an object to control the stream;
     ,sendOnConnect:'{"op":"unconfirmed_sub"}'
     ,channels:['pubnub-twitter']
     ,fnResults=function(results){ console.log(results); }
+    ,fnError=function(results){ console.log(results); }
+    ,fnClose=function(results){ console.log(results); }
     ,fReconnect=true
   }
   
