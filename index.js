@@ -86,6 +86,8 @@ var metastream = function(objConfig){
 	   	   
 	   },send:function(objMessage,strChannel){
 	   	  
+	   },onMsg:function(objMsg){
+	   	
 	   }
 	};
 	//----====|| pubnub ||====----\\
