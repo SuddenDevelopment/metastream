@@ -25,9 +25,10 @@ var metastream = function(objConfig){
 	*/
 	//keep a list of allowed protocols and their defaults
 	this.objProtocols={'websocket':{}};
-	this.type='websocket';
+	this.type=objConfig.type;
 	this.addr='ws://localhost:8080';
 	this.objConfig=objConfig;
+
 	if(typeof objConfig.id !== 'undefined'){ this.id=objConfig.id; }
 	if(typeof this.objProtocols[objConfig.type] !== 'undefined'){ this.type=objConfig.type; }
 	if(typeof objConfig.addr !== 'undefined'){ this.addr=objConfig.addr; }
@@ -42,7 +43,7 @@ var metastream = function(objConfig){
 
 	var self=this;
 	this.go=function(){
-	  //becasue these are dynamically called, each abstratced lib needs to have the same numer of params for each function  
+		//because these are dynamically called, each abstratced lib needs to have the same numer of params for each function  
 	  //detect if connected, connect if not
 	  if(self.state==='disconnected'){ self[self.type].connect(); }
 	  self[self.type].go();
@@ -79,16 +80,44 @@ var metastream = function(objConfig){
 	//----====|| satori ||====----\\
 	this.satori={
 	   connect: function(){
-	   	  
+        self.state='connecting';
+
+        self.objProtocol = new RTM(self.addr, self.objConfig.appKey);
+
+        self.objProtocol.on('leave-connected', function() {
+          self.state='disconnected';
+        });
+
+        self.objProtocol.on('enter-connected', function() {
+          self.state='connected';
+        });
+
+        var subscription = self.objProtocol.subscribe(self.objConfig.channel, RTM.SubscriptionMode.SIMPLE);
+        subscription.on('rtm/subscription/data', function (pdu) {
+          pdu.body.messages.forEach(function (msg) {
+            self.satori.onMsg({
+              data: msg // IMPORTANT: doesn't work unless the message is encapsulated in a 'data' parameter
+            })
+          });
+        });
+
 	   },go: function(objSrc){
-	      
-	   },stop: function(objSrc){ 
-	   	   
-	   },send:function(objMessage,strChannel){
-	   	  
-	   },onMsg:function(objMsg){
-	   	
-	   }
+        self.objProtocol.start()
+      },stop: function(objSrc){
+        if (self.objProtocol.stop) {
+          self.objProtocol.stop()
+        }
+      },send:function(objMessage,strChannel){
+        strChannel = strChannel || objConfig.channel;
+        self.objProtocol.publish(strChannel, objMessage, function(res) {
+          if (!res.action.endsWith('/ok')) {
+            console.log('Satori - SEND FAILED');
+          }
+        });
+      },onMsg:function(objMsg){
+        self.state='streaming';
+        self.fnResults(objMsg,objConfig);
+      }
 	};
 	//----====|| pubnub ||====----\\
 	//----====|| pusher ||====----\\

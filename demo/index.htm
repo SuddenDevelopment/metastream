@@ -54,6 +54,7 @@
 <!-- include client libraries -->
 <script type="text/javascript" src="//js.pusher.com/2.2/pusher.min.js"></script>
 <script type="text/javascript" src="//cdn.pubnub.com/pubnub.min.js"></script>
+<script type="text/javascript" src="https://satori-a.akamaihd.net/satori-rtm-sdk/v1.0.2/sdk.min.js"></script>
 <!-- This is the metastream library, it can detect which stream libraries are included -->
 <script src="../index.js"></script>
 <script>
@@ -81,11 +82,10 @@ app.controller('controllerMain', function($scope) {
 	//these hold the individual configs that work with metastream. each config should be able to be passed to metastream to make a connection and get data
 	$scope.menu.sources=[
 		 {"source":'websocket, localhost:8080',"config":{"type":'websocket',"addr":'ws://localhost:8080'}}
-		,{"source":'BlockChain Transactions',"config":
-			{"type":'websocket',"addr":'wss://ws.blockchain.info/inv',"sendOnConnect":'{"op":"unconfirmed_sub"}'}}
+		,{"source":'BlockChain Transactions',"config":{"type":'websocket',"addr":'wss://ws.blockchain.info/inv',"sendOnConnect":'{"op":"unconfirmed_sub"}'}}
 		,{"source":'pubnub',"config":{}}
 		,{"source":'pusher',"config":{}}
-		,{"source":'satori',"config":{}}
+		,{"source":'satori',"config":{ "type": "satori", "addr": "wss://open-data.api.satori.com", "appKey": "830dbcc815C967CC994Dc9af0BaBCf56", "channel": "github-events" }}
 		,{"source":'json-stream',"config":{}}
 		,{"source":'signalr',"config":{}}
 		,{"source":'sockjs',"config":{}}
