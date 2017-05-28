@@ -184,7 +184,7 @@ var metastream = function(objConfig){
 	   	  self.state='connecting';
 	   	  //send first message if configured, sometimes used for auth or subscribtions
 	   },go: function(){
-	      this.connect();
+	      self.objProtocol.connect();
 	   },stop: function(){
 	   	  self.objProtocol.close();
 	   },onMsg:function(strChannel,objMsg){
