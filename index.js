@@ -1,13 +1,8 @@
-//I need a way to include the node libs only when on node and needed, cleanly
-var ws={};
-var hpc={};
-
-if(typeof module==='object'){
-	console.log('on node');
-	ws=require('ws');
-	hpc=require('./lib/HPC.js').HPC;
-};
-
+if (typeof module !== 'undefined' && module.exports && typeof window === 'undefined'){
+	var operating_environment = 'node';
+}else{
+	var operating_environment = 'browser';
+}
 var metastream = function(objConfig){
 	'use strict';
 	//----====|| REQUIREMENTS ||====----\\
@@ -34,10 +29,14 @@ var metastream = function(objConfig){
 	  }
 	*/
 	//keep a list of allowed protocols and their defaults
+	if(operating_environment==='node'){
+		var ws=require('ws');
+		var hpc=require('./lib/HPC.js').HPC;
+	}
 	this.objProtocols={
 		 "websocket":{}
 		,"satori":{}
-		,"ipc":{}
+		,"hpfeed":{}
 	};
 	this.type=objConfig.type;
 	this.addr='ws://localhost:8080';
@@ -161,13 +160,7 @@ var metastream = function(objConfig){
         self.fnResults(objMsg,objConfig);
       },onErr:function(objErr){ console.log(objErr); }
 	};
-	//----====|| pubnub ||====----\\
-	//----====|| pusher ||====----\\
-	//----====|| socket.io ||====----\\
-	//----====|| sockjs ||====----\\
-	//----====|| json stream node ||====----\\
-	//----====|| signalr, no jquery ||====----\\
-	//----====|| hpfeeds node ||====----\\
+	//----====|| hpfeeds in node ||====----\\
 	this.hpfeed={
 		/*
 			https://github.com/SuddenDevelopment/node-hpfeeds
@@ -182,7 +175,6 @@ var metastream = function(objConfig){
 	   	  	,this.onMsg
 	   	  );
 	   	  self.state='connecting';
-	   	  //send first message if configured, sometimes used for auth or subscribtions
 	   },go: function(){
 	      self.objProtocol.connect();
 	   },stop: function(){
@@ -193,25 +185,13 @@ var metastream = function(objConfig){
 	   	  self.fnResults(objMsg,objConfig);
 	   },onErr:function(objErr){ console.log(objErr); }
 	};
-	//----====|| electron IPC ||====----\\
-	this.ipc={
-		/*
-			//IPC is primarily for use in Electron, it can allow the node components to get the data and this just proxies the commands
-			// In renderer process (web page).  https://github.com/electron/electron/blob/master/docs/api/ipc-main.md
-		*/
-	    connect: function(){ 
-	    	if(typeof self.objProtocol === 'undefined'){ self.objProtocol = require('electron'); }
-	    	ipc.send({"action":'connect',"config":self.objConfig});
-	   },go:function(objSrc){ 
-	   		ipc.send({"action":'go',"config":self.objConfig});
-	   	}
-	   ,stop:function(objSrc){ ipc.send({"action":'stop',"config":self.objConfig}); }
-	   ,send:function(objMessage,strChannel){ ipc.send({"action":'send',"config":self.objConfig,"data":{"msg":objMessage,"chan":strChannel}}); }
-	   ,onMsg:function(objMsg){
-	   	  self.state='streaming';
-	   	  self.fnResults(objMsg,objConfig);
-	   }
-	};
+	//----====|| pubnub ||====----\\
+	//----====|| pusher ||====----\\
+	//----====|| socket.io ||====----\\
+	//----====|| sockjs ||====----\\
+	//----====|| json stream node ||====----\\
+	//----====|| signalr, no jquery ||====----\\
+
 }
 //this is for node to be able to "require" it. node may need different pre-requisite libraries, not all protocols work work in node and nto all will work in browser
-if (typeof module !== 'undefined' && module.exports){module.exports = metastream;}
+if (operating_environment === 'node' && typeof module !== 'undefined'){module.exports = metastream;}
