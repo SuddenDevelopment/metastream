@@ -1,3 +1,11 @@
+//I need a way to include the node libs only when on node cleanly
+var ws={};
+
+if(typeof module==='object'){
+	console.log('on node');
+	ws = require('ws');
+};
+
 var metastream = function(objConfig){
 	'use strict';
 	//----====|| REQUIREMENTS ||====----\\
@@ -24,7 +32,11 @@ var metastream = function(objConfig){
 	  }
 	*/
 	//keep a list of allowed protocols and their defaults
-	this.objProtocols={'websocket':{}};
+	this.objProtocols={
+		 "websocket":{}
+		,"satori":{}
+		,"ipc":{}
+	};
 	this.type=objConfig.type;
 	this.addr='ws://localhost:8080';
 	this.objConfig=objConfig;
@@ -40,7 +52,7 @@ var metastream = function(objConfig){
 	//keep the status for easy reference, connecting, connected, disconnected, streaming, error
 	this.state='disconnected';
 	//check if the pre-requisite libraries can be found for the protocol selected, need to load pubnub before using pubnub in this lib
-
+	if (typeof module !== 'undefined'){ this.mode='node'; }else{ this.mode='browser'; }
 	var self=this;
 	this.go=function(){
 		//because these are dynamically called, each abstratced lib needs to have the same numer of params for each function  
@@ -63,10 +75,11 @@ var metastream = function(objConfig){
 	   	  } 
 	   },go: function(){
 	      self.objProtocol.onmessage=this.onMsg;
-	      self.objProtocol.onerror=self.fnError;
+	      self.objProtocol.onerror=this.onErr;
 	      self.objProtocol.onclose=function(){
 	      	self.state='disconnected';
 	      	if(typeof objConfig.fnClose !== 'undefined'){this.fnClose;}
+	      	//reconnect if the close wasnt intentional
 	      };
 	   },stop: function(){ 
 	   	  self.objProtocol.close(); 
@@ -75,11 +88,38 @@ var metastream = function(objConfig){
 	   },onMsg:function(objMsg){
 	   	  self.state='streaming';
 	   	  self.fnResults(objMsg,objConfig);
-	   }
+	   },onErr:function(objErr){ console.log(objErr); }
+	};
+	//----====|| ws client on node||====----\\
+	this.ws={
+	   connect: function(){
+	   	  self.objProtocol = new ws(self.addr);
+	   	  self.state='connecting';
+	   	  //send first message if configured, sometimes used for auth or subscribtions
+		  self.objProtocol.on('open', function(){
+			self.state='connected';
+			if(typeof objConfig.sendOnConnect !== 'undefined'){this.send(objConfig.sendOnConnect);}
+		  });
+	   },go: function(){
+	      self.objProtocol.on('message',this.onMsg);
+	      self.objProtocol.on('error',this.onErr);
+	      self.objProtocol.on('close',function(){
+	      	self.state='disconnected';
+	      	//reconnect if the close wasnt intentional
+	      });
+	   },stop: function(){ 
+	   	  self.objProtocol.close(); 
+	   },send:function(objMessage,strChannel){
+	   	  self.objProtocol.send(objMessage);
+	   },onMsg:function(objMsg){
+	   	  self.state='streaming';
+	   	  self.fnResults(objMsg,objConfig);
+	   },onErr:function(objErr){ console.log(objErr); }
 	};
 	//----====|| satori ||====----\\
 	this.satori={
-	   connect: function(){
+	   "features":{ "browser":true }
+	   ,connect: function(){
         self.state='connecting';
 
         self.objProtocol = new RTM(self.addr, self.objConfig.appKey);
@@ -117,12 +157,11 @@ var metastream = function(objConfig){
       },onMsg:function(objMsg){
         self.state='streaming';
         self.fnResults(objMsg,objConfig);
-      }
+      },onErr:function(objErr){ console.log(objErr); }
 	};
 	//----====|| pubnub ||====----\\
 	//----====|| pusher ||====----\\
 	//----====|| socket.io ||====----\\
-	//----====|| satori ||====----\\
 	//----====|| sockjs ||====----\\
 	//----====|| json stream ||====----\\
 	//----====|| signalr, no jquery ||====----\\
@@ -151,3 +190,5 @@ var metastream = function(objConfig){
 	   }
 	};
 }
+//this is for node to be able to "require" it. node may need different pre-requisite libraries, not all protocols work work in node and nto all will work in browser
+if (typeof module !== 'undefined' && module.exports){module.exports = metastream;}

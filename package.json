@@ -20,5 +20,8 @@
   "bugs": {
     "url": "https://github.com/SuddenDevelopment/metastream/issues"
   },
-  "homepage": "https://github.com/SuddenDevelopment/metastream#readme"
+  "homepage": "https://github.com/SuddenDevelopment/metastream#readme",
+  "dependencies": {
+    "ws": "^3.0.0"
+  }
 }
