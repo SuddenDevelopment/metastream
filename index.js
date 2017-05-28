@@ -1,9 +1,11 @@
-//I need a way to include the node libs only when on node cleanly
+//I need a way to include the node libs only when on node and needed, cleanly
 var ws={};
+var hpc={};
 
 if(typeof module==='object'){
 	console.log('on node');
-	ws = require('ws');
+	ws=require('ws');
+	hpc=require('./lib/HPC.js').HPC;
 };
 
 var metastream = function(objConfig){
@@ -71,14 +73,14 @@ var metastream = function(objConfig){
 	   	  //send first message if configured, sometimes used for auth or subscribtions
 	   	  self.objProtocol.onopen=function(){
 	   	  	self.state='connected';
-	   	  	if(typeof objConfig.sendOnConnect !== 'undefined'){this.send(objConfig.sendOnConnect);}
+	   	  	if(typeof self.objConfig.sendOnConnect !== 'undefined'){this.send(self.objConfig.sendOnConnect);}
 	   	  } 
 	   },go: function(){
 	      self.objProtocol.onmessage=this.onMsg;
 	      self.objProtocol.onerror=this.onErr;
 	      self.objProtocol.onclose=function(){
 	      	self.state='disconnected';
-	      	if(typeof objConfig.fnClose !== 'undefined'){this.fnClose;}
+	      	if(typeof self.objConfig.fnClose !== 'undefined'){this.fnClose;}
 	      	//reconnect if the close wasnt intentional
 	      };
 	   },stop: function(){ 
@@ -87,7 +89,7 @@ var metastream = function(objConfig){
 	   	  self.objProtocol.send(objMessage);
 	   },onMsg:function(objMsg){
 	   	  self.state='streaming';
-	   	  self.fnResults(objMsg,objConfig);
+	   	  self.fnResults(objMsg,self.objConfig);
 	   },onErr:function(objErr){ console.log(objErr); }
 	};
 	//----====|| ws client on node||====----\\
@@ -98,7 +100,7 @@ var metastream = function(objConfig){
 	   	  //send first message if configured, sometimes used for auth or subscribtions
 		  self.objProtocol.on('open', function(){
 			self.state='connected';
-			if(typeof objConfig.sendOnConnect !== 'undefined'){this.send(objConfig.sendOnConnect);}
+			if(typeof self.objConfig.sendOnConnect !== 'undefined'){this.send(self.objConfig.sendOnConnect);}
 		  });
 	   },go: function(){
 	      self.objProtocol.on('message',this.onMsg);
@@ -113,7 +115,7 @@ var metastream = function(objConfig){
 	   	  self.objProtocol.send(objMessage);
 	   },onMsg:function(objMsg){
 	   	  self.state='streaming';
-	   	  self.fnResults(objMsg,objConfig);
+	   	  self.fnResults(objMsg,self.objConfig);
 	   },onErr:function(objErr){ console.log(objErr); }
 	};
 	//----====|| satori ||====----\\
@@ -163,25 +165,46 @@ var metastream = function(objConfig){
 	//----====|| pusher ||====----\\
 	//----====|| socket.io ||====----\\
 	//----====|| sockjs ||====----\\
-	//----====|| json stream ||====----\\
+	//----====|| json stream node ||====----\\
 	//----====|| signalr, no jquery ||====----\\
+	//----====|| hpfeeds node ||====----\\
+	this.hpfeed={
+		/*
+			https://github.com/SuddenDevelopment/node-hpfeeds
+		*/
+		connect: function(){
+	   	  self.objProtocol = new hpc(
+	   	  	 self.objConfig.addr
+	   	  	,self.objConfig.port
+	   	  	,self.objConfig.un
+	   	  	,self.objConfig.pw
+	   	  	,self.objConfig.channel
+	   	  	,this.onMsg
+	   	  );
+	   	  self.state='connecting';
+	   	  //send first message if configured, sometimes used for auth or subscribtions
+	   },go: function(){
+	      this.connect();
+	   },stop: function(){
+	   	  self.objProtocol.close();
+	   },onMsg:function(strChannel,objMsg){
+	   	  objMsg.channel=strChannel;
+	   	  self.state='streaming';
+	   	  self.fnResults(objMsg,objConfig);
+	   },onErr:function(objErr){ console.log(objErr); }
+	};
 	//----====|| electron IPC ||====----\\
-	//IPC is primarily for use in Electron, it can allow the node components to get the data and this just proxies the commands
 	this.ipc={
 		/*
+			//IPC is primarily for use in Electron, it can allow the node components to get the data and this just proxies the commands
 			// In renderer process (web page).  https://github.com/electron/electron/blob/master/docs/api/ipc-main.md
-			const {ipc} = require('electron')
-			console.log(ipc.sendSync('synchronous-message', 'ping')) // prints "pong"
-
-			ipc.on('asynchronous-reply', (event, arg) => {
-			  console.log(arg) // prints "pong"
-			})
-			ipc.send('asynchronous-message', 'ping')
 		*/
 	    connect: function(){ 
 	    	if(typeof self.objProtocol === 'undefined'){ self.objProtocol = require('electron'); }
-	    	ipc.send({"action":'connect',"config":self.objConfig}); 
-	   },go:function(objSrc){ ipc.send({"action":'go',"config":self.objConfig}); }
+	    	ipc.send({"action":'connect',"config":self.objConfig});
+	   },go:function(objSrc){ 
+	   		ipc.send({"action":'go',"config":self.objConfig});
+	   	}
 	   ,stop:function(objSrc){ ipc.send({"action":'stop',"config":self.objConfig}); }
 	   ,send:function(objMessage,strChannel){ ipc.send({"action":'send',"config":self.objConfig,"data":{"msg":objMessage,"chan":strChannel}}); }
 	   ,onMsg:function(objMsg){
