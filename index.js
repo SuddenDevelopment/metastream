@@ -32,6 +32,7 @@ var metastream = function(objConfig){
 	if(operating_environment==='node'){
 		var ws=require('ws');
 		var hpc=require('./lib/HPC.js').HPC;
+		var Shodan=require('./lib/Shodan.js').Shodan;
 	}
 	this.objProtocols={
 		 "websocket":{}
@@ -185,6 +186,38 @@ var metastream = function(objConfig){
 	   	  self.fnResults(objMsg,objConfig);
 	   },onErr:function(objErr){ console.log(objErr); }
 	};
+
+	//----====|| shodan in node ||====----\\
+	this.shodan={
+		connect: function() {
+			// Only create a new connection if we don't already have an active connection
+			if (['connected', 'streaming'].indexOf(self.state) === -1) {
+				self.state='connecting';
+
+				self.objProtocol = new Shodan({
+						url: self.objConfig.addr,
+						appKey: self.objConfig.appKey,
+						onMessage: self.fnResults
+				});
+			}
+		},
+		go: function() {
+			self.objProtocol.connect();
+			self.state='connected';
+		},
+		stop: function() {
+			self.objProtocol.close();
+			self.state='disconnected';
+		},
+		onMsg:function(objMsg) {
+			self.state='streaming';
+			self.fnResults(objMsg, objConfig);
+		},
+		onErr:function(objErr) {
+			console.log(objErr);
+		}
+	};
+
 	//----====|| pubnub ||====----\\
 	//----====|| pusher ||====----\\
 	//----====|| socket.io ||====----\\
