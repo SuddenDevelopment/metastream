@@ -52,7 +52,7 @@ var metastream = function(objConfig){
 		this.fnResults = objConfig.fnResults;
 	} else {
 		this.fnResults = function(objMessage) {
-			console.log('DEFAULT MESSAGE HANDLER: ', objMessage);
+      console.log('DEFAULT MESSAGE HANDLER: ', objMessage);
 		}
 	}
 
