@@ -33,12 +33,14 @@ var metastream = function(objConfig){
 		var ws=require('ws');
 		var hpc=require('./lib/HPC.js').HPC;
 		var Shodan=require('./lib/Shodan.js').Shodan;
+    var File=require('./lib/File.js').File;
 	}
 	this.objProtocols={
 		 "websocket":{}
 		,"satori":{}
 		,"shodan":{}
 		,"hpfeed":{}
+    ,"file":{}
 	};
 	this.type=objConfig.type;
 	this.addr='ws://localhost:8080';
@@ -224,6 +226,36 @@ var metastream = function(objConfig){
 			console.log('ERROR: ', objErr);
 		}
 	};
+
+  //----====|| stream a file ||====----\\
+  this.file={
+    connect: function() {
+      // Only create a new connection if we don't already have an active connection
+      if (['connected', 'streaming'].indexOf(self.state) === -1) {
+        self.state='connecting';
+
+        self.objProtocol = new File({
+            path: self.objConfig.path,
+            onMessage: this.onMsg
+        });
+      }
+    },
+    go: function() {
+      self.objProtocol.connect();
+      self.state='connected';
+    },
+    stop: function() {
+      self.objProtocol.close();
+      self.state='disconnected';
+    },
+    onMsg:function(objMsg) {
+      self.state='streaming';
+      self.fnResults(objMsg, objConfig);
+    },
+    onErr:function(objErr) {
+      console.log('ERROR: ', objErr);
+    }
+  };
 
 	//----====|| pubnub ||====----\\
 	//----====|| pusher ||====----\\
