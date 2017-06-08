@@ -33,14 +33,14 @@ var metastream = function(objConfig){
 		var ws=require('ws');
 		var hpc=require('./lib/HPC.js').HPC;
 		var Shodan=require('./lib/Shodan.js').Shodan;
-    var File=require('./lib/File.js').File;
+    var Tail=require('./lib/Tail.js').Tail;
 	}
 	this.objProtocols={
 		 "websocket":{}
 		,"satori":{}
 		,"shodan":{}
 		,"hpfeed":{}
-    ,"file":{}
+    ,"tail":{}
 	};
 	this.type=objConfig.type;
 	this.addr='ws://localhost:8080';
@@ -227,14 +227,14 @@ var metastream = function(objConfig){
 		}
 	};
 
-  //----====|| stream a file ||====----\\
-  this.file={
+  //----====|| tail a file as a stream ||====----\\
+  this.tail={
     connect: function() {
       // Only create a new connection if we don't already have an active connection
       if (['connected', 'streaming'].indexOf(self.state) === -1) {
         self.state='connecting';
 
-        self.objProtocol = new File({
+        self.objProtocol = new Tail({
             path: self.objConfig.path,
             onMessage: this.onMsg
         });
