@@ -33,11 +33,14 @@ var metastream = function(objConfig){
 		var ws=require('ws');
 		var hpc=require('./lib/HPC.js').HPC;
 		var Shodan=require('./lib/Shodan.js').Shodan;
+    var File=require('./lib/File.js').File;
 	}
 	this.objProtocols={
 		 "websocket":{}
 		,"satori":{}
+		,"shodan":{}
 		,"hpfeed":{}
+    ,"file":{}
 	};
 	this.type=objConfig.type;
 	this.addr='ws://localhost:8080';
@@ -46,8 +49,14 @@ var metastream = function(objConfig){
 	if(typeof objConfig.id !== 'undefined'){ this.id=objConfig.id; }
 	if(typeof this.objProtocols[objConfig.type] !== 'undefined'){ this.type=objConfig.type; }
 	if(typeof objConfig.addr !== 'undefined'){ this.addr=objConfig.addr; }
-	if(typeof objConfig.fnResults !== 'undefined'){ this.fnResults=objConfig.fnResults; }
-	   else{ this.fnResults=function(objMessage){ console.log(objMessage); } }
+
+	if (typeof objConfig.fnResults !== 'undefined') {
+		this.fnResults = objConfig.fnResults;
+	} else {
+		this.fnResults = function(objMessage) {
+      console.log('DEFAULT MESSAGE HANDLER: ', objMessage);
+		}
+	}
 
 	//hold the object that is returned by whatever protocol we are running in this instance
 	this.objProtocol={};
@@ -197,7 +206,7 @@ var metastream = function(objConfig){
 				self.objProtocol = new Shodan({
 						url: self.objConfig.addr,
 						appKey: self.objConfig.appKey,
-						onMessage: self.fnResults
+						onMessage: this.onMsg
 				});
 			}
 		},
@@ -214,9 +223,39 @@ var metastream = function(objConfig){
 			self.fnResults(objMsg, objConfig);
 		},
 		onErr:function(objErr) {
-			console.log(objErr);
+			console.log('ERROR: ', objErr);
 		}
 	};
+
+  //----====|| stream a file ||====----\\
+  this.file={
+    connect: function() {
+      // Only create a new connection if we don't already have an active connection
+      if (['connected', 'streaming'].indexOf(self.state) === -1) {
+        self.state='connecting';
+
+        self.objProtocol = new File({
+            path: self.objConfig.path,
+            onMessage: this.onMsg
+        });
+      }
+    },
+    go: function() {
+      self.objProtocol.connect();
+      self.state='connected';
+    },
+    stop: function() {
+      self.objProtocol.close();
+      self.state='disconnected';
+    },
+    onMsg:function(objMsg) {
+      self.state='streaming';
+      self.fnResults(objMsg, objConfig);
+    },
+    onErr:function(objErr) {
+      console.log('ERROR: ', objErr);
+    }
+  };
 
 	//----====|| pubnub ||====----\\
 	//----====|| pusher ||====----\\
