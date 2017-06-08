@@ -1,10 +1,12 @@
 const metastream = require('../index.js');
 
 (function() {
+
+  const TIMEOUT = 30000;
  
   // Initializes the Shodan metastream
   var objStream = new metastream({
-    type: "file", 
+    type: "tail",
     path: "/tmp/tail.txt"
   });
 
@@ -13,7 +15,12 @@ const metastream = require('../index.js');
 
   // Stops the stream 60 seconds after it was started.
   setTimeout(function() {
-    console.log('Stopping TAIL, 2 minutes after start. If you don\'t want this limitation, then delete the setTimeout call in demo/tail-demo.js');
+    console.log('Stopping TAIL, 30 seconds after start.');
     objStream.stop();
-  }, 120000);
+  }, TIMEOUT);
+
+  setTimeout(function() {
+    console.log('Restarting TAIL. This demonstrates that watching picks back up and continues working.');
+    objStream.go();
+  }, TIMEOUT + 1);
 }())
