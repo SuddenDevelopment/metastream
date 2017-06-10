@@ -40,7 +40,8 @@ var metastream = function(objConfig){
 		,"satori":{}
 		,"shodan":{}
 		,"hpfeed":{}
-    ,"tail":{}
+		,"pubnub":{}
+    	,"tail":{}
 	};
 	this.type=objConfig.type;
 	this.addr='ws://localhost:8080';
@@ -66,7 +67,7 @@ var metastream = function(objConfig){
 	if (typeof module !== 'undefined'){ this.mode='node'; }else{ this.mode='browser'; }
 	var self=this;
 	this.go=function(){
-		//because these are dynamically called, each abstratced lib needs to have the same numer of params for each function  
+	  	//because these are dynamically called, each abstratced lib needs to have the same numer of params for each function  
 	  //detect if connected, connect if not
 	  if(self.state==='disconnected'){ self[self.type].connect(); }
 	  self[self.type].go();
@@ -258,6 +259,40 @@ var metastream = function(objConfig){
   };
 
 	//----====|| pubnub ||====----\\
+	this.pubnub={
+		/*
+			https://www.pubnub.com/docs/web-javascript/api-reference
+		*/
+		connect: function() {
+			// Only create a new connection if we don't already have an active connection
+			if (['connected', 'streaming'].indexOf(self.state) === -1) {
+				self.state='connecting';
+
+				self.objProtocol = new PubNub({
+					subscribeKey: self.objConfig.addr
+				});
+			}
+	   },go: function(){
+	      self.objProtocol.subscribe({channels: self.objConfig.channels});
+	      self.state = 'connected';
+
+		  self.objProtocol.addListener({
+		      message: function(m) {
+	              self.pubnub.onMsg({
+	                data: m.message // IMPORTANT: doesn't work unless the message is encapsulated in a 'data' parameter
+	              })
+		      }
+		  });
+	   },stop: function(){
+		  self.objProtocol.unsubscribe({channels: self.objConfig.channels});
+		  self.state='disconnected';
+	   },onMsg:function(objMsg){
+		  self.state='streaming';
+		  self.fnResults(objMsg,objConfig);
+	   },onErr:function(objErr){ console.log(objErr); }
+	};
+
+
 	//----====|| pusher ||====----\\
 	//----====|| socket.io ||====----\\
 	//----====|| sockjs ||====----\\
