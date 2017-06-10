@@ -40,8 +40,9 @@ var metastream = function(objConfig){
 		,"satori":{}
 		,"shodan":{}
 		,"hpfeed":{}
+		,"tail":{}
 		,"pubnub":{}
-    	,"tail":{}
+		,"pusher":{}
 	};
 	this.type=objConfig.type;
 	this.addr='ws://localhost:8080';
@@ -261,13 +262,13 @@ var metastream = function(objConfig){
 	//----====|| pubnub ||====----\\
 	this.pubnub={
 		/*
-			https://www.pubnub.com/docs/web-javascript/api-reference
+			https://www.pubnub.com/docs/web-javascript/api-reference (latest)
+			https://www.pubnub.com/docs/web-javascript/pubnub-javascript-sdk-v3 (current)
 		*/
 		connect: function() {
 			// Only create a new connection if we don't already have an active connection
 			if (['connected', 'streaming'].indexOf(self.state) === -1) {
 				self.state='connecting';
-
 				self.objProtocol = new PUBNUB.init({
 					subscribe_key: self.objConfig.addr
 				});
@@ -291,8 +292,38 @@ var metastream = function(objConfig){
 	   },onErr:function(objErr){ console.log(objErr); }
 	};
 
-
 	//----====|| pusher ||====----\\
+	this.pusher={
+		/*
+			https://pusher.com/docs/client_api_guide
+		*/
+		connect: function() {
+			// Only create a new connection if we don't already have an active connection
+			if (['connected', 'streaming'].indexOf(self.state) === -1) {
+				self.state='connecting';
+				self.objProtocol = new Pusher(self.objConfig.addr);
+			}
+	   },go: function(){
+		  self.objConfig.channels.forEach(function (channel) {
+			self.objProtocol.subscribe(channel);
+		  });
+		  self.objConfig.events.forEach(function (event) {
+			self.objProtocol.bind(event, function(msg) {
+				self.pusher.onMsg({
+					data: msg
+				});
+			});
+		  });
+	      self.state = 'connected';
+	   },stop: function(){
+		  self.objProtocol.disconnect();
+		  self.state='disconnected';
+	   },onMsg:function(objMsg){
+		  self.state='streaming';
+		  self.fnResults(objMsg,objConfig);
+	   },onErr:function(objErr){ console.log(objErr); }
+	};
+
 	//----====|| socket.io ||====----\\
 	//----====|| sockjs ||====----\\
 	//----====|| json stream node ||====----\\
