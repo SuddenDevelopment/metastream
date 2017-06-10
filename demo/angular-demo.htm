@@ -53,8 +53,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.4/lodash.min.js"></script>
 <!-- include client libraries -->
 <script type="text/javascript" src="//js.pusher.com/2.2/pusher.min.js"></script>
-<!-- <script type="text/javascript" src="https://cdn.pubnub.com/pubnub.min.js"></script> -->
-<script type="text/javascript" src="https://cdn.pubnub.com/sdk/javascript/pubnub.4.10.0.js"></script>
+<script type="text/javascript" src="https://cdn.pubnub.com/pubnub-3.16.5.min.js"></script>
 <script type="text/javascript" src="https://satori-a.akamaihd.net/satori-rtm-sdk/v1.0.2/sdk.min.js"></script>
 <!-- This is the metastream library, it can detect which stream libraries are included -->
 <script src="../index.js"></script>
@@ -84,7 +83,7 @@ app.controller('controllerMain', function($scope) {
 	$scope.menu.sources=[
 		 {"source":'websocket, localhost:8080',"config":{"type":'websocket',"addr":'ws://localhost:8080'}}
 		,{"source":'BlockChain Transactions',"config":{"type":'websocket',"addr":'wss://ws.blockchain.info/inv',"sendOnConnect":'{"op":"unconfirmed_sub"}'}}
-		,{"source":'pubnub',"config":{"type":'pubnub', "addr":'sub-c-78806dd4-42a6-11e4-aed8-02ee2ddab7fe', "channels":['pubnub-twitter']}}
+		,{"source":'pubnub',"config":{"type":'pubnub', "addr":'sub-c-78806dd4-42a6-11e4-aed8-02ee2ddab7fe', "channel":'pubnub-twitter'}}
 		,{"source":'pusher',"config":{}}
 		,{"source":'satori',"config":{ "type": "satori", "addr": "wss://open-data.api.satori.com", "appKey": "830dbcc815C967CC994Dc9af0BaBCf56", "channel": "github-events" }}
 		,{"source":'json-stream',"config":{}}

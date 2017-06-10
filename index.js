@@ -268,23 +268,22 @@ var metastream = function(objConfig){
 			if (['connected', 'streaming'].indexOf(self.state) === -1) {
 				self.state='connecting';
 
-				self.objProtocol = new PubNub({
-					subscribeKey: self.objConfig.addr
+				self.objProtocol = new PUBNUB.init({
+					subscribe_key: self.objConfig.addr
 				});
 			}
 	   },go: function(){
-	      self.objProtocol.subscribe({channels: self.objConfig.channels});
-	      self.state = 'connected';
-
-		  self.objProtocol.addListener({
-		      message: function(m) {
-	              self.pubnub.onMsg({
-	                data: m.message // IMPORTANT: doesn't work unless the message is encapsulated in a 'data' parameter
-	              })
-		      }
+	      self.objProtocol.subscribe({
+			channel: self.objConfig.channel
+			,message : function(m){
+			  self.pubnub.onMsg({
+				data: m // IMPORTANT: doesn't work unless the message is encapsulated in a 'data' parameter
+			  });
+			}
 		  });
+	      self.state = 'connected';
 	   },stop: function(){
-		  self.objProtocol.unsubscribe({channels: self.objConfig.channels});
+		  self.objProtocol.unsubscribe({channel: self.objConfig.channel});
 		  self.state='disconnected';
 	   },onMsg:function(objMsg){
 		  self.state='streaming';
