@@ -7,7 +7,10 @@ const metastream = require('../index.js');
     type: "shodan", 
     channel: "banners",
     addr: "https://stream.shodan.io/shodan/banners",
-    appKey: "0ZM3HtWOz5qGkQPZL8SjSuaj7IIearmT"
+    appKey: "0ZM3HtWOz5qGkQPZL8SjSuaj7IIearmT",
+    fnResults: function(objMsg){
+      console.log('.');
+    }
   });
 
   // Starts the Shodan stream. This creates the connection and immediately starts streaming records.
