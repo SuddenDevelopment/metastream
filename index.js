@@ -33,14 +33,15 @@ var metastream = function(objConfig){
 		var ws=require('ws');
 		var hpc=require('./lib/HPC.js').HPC;
 		var Shodan=require('./lib/Shodan.js').Shodan;
-    var Tail=require('./lib/Tail.js').Tail;
+    	var Tail=require('./lib/Tail.js').Tail;
+    	var RTM=require("satori-rtm-sdk");
 	}
 	this.objProtocols={
 		 "websocket":{}
-		,"satori":{}
 		,"shodan":{}
 		,"hpfeed":{}
-    ,"tail":{}
+		,"satori":{}
+    	,"tail":{}
 	};
 	this.type=objConfig.type;
 	this.addr='ws://localhost:8080';
@@ -68,6 +69,7 @@ var metastream = function(objConfig){
 	this.go=function(){
 		//because these are dynamically called, each abstratced lib needs to have the same numer of params for each function  
 	  //detect if connected, connect if not
+	  console.log(self.type);
 	  if(self.state==='disconnected'){ self[self.type].connect(); }
 	  self[self.type].go();
 	};
@@ -128,6 +130,7 @@ var metastream = function(objConfig){
 	   },onErr:function(objErr){ console.log(objErr); }
 	};
 	//----====|| satori ||====----\\
+	// https://github.com/satori-com/satori-rtm-sdk-js
 	this.satori={
 	   "features":{ "browser":true }
 	   ,connect: function(){
