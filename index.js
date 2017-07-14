@@ -34,7 +34,8 @@ var metastream = function(objConfig){
 		var hpc=require('./lib/HPC.js').HPC;
 		var Shodan=require('./lib/Shodan.js').Shodan;
     	var Tail=require('./lib/Tail.js').Tail;
-    	var RTM=require("satori-rtm-sdk");
+    	var RTM=require('satori-rtm-sdk');
+    	var PubNub = require('pubnub')
 	}
 	this.objProtocols={
 		 "websocket":{}
@@ -42,6 +43,8 @@ var metastream = function(objConfig){
 		,"hpfeed":{}
 		,"satori":{}
     	,"tail":{}
+    	,"pubnub":{}
+    	,"pusher":{}
 	};
 	this.type=objConfig.type;
 	this.addr='ws://localhost:8080';
@@ -261,7 +264,78 @@ var metastream = function(objConfig){
   };
 
 	//----====|| pubnub ||====----\\
+	this.pubnub={
+		/*
+			https://www.pubnub.com/docs/web-javascript/api-reference (latest)
+			https://www.pubnub.com/docs/web-javascript/pubnub-javascript-sdk-v3 (current)
+		*/
+		connect: function() {
+			// Only create a new connection if we don't already have an active connection
+			if (['connected', 'streaming'].indexOf(self.state) === -1) {
+				self.state='connecting';
+				self.objProtocol = new PubNub({
+					subscribe_key: self.objConfig.addr
+				});
+			}
+	   },go: function(){
+	      /*
+	      self.objProtocol.subscribe({
+			channel: self.objConfig.channel
+			,message : function(m){
+			  self.pubnub.onMsg({
+				data: m // IMPORTANT: doesn't work unless the message is encapsulated in a 'data' parameter
+			  });
+			}
+		  });
+		  */
+		  // https://www.pubnub.com/docs/nodejs-javascript/pubnub-javascript-sdk
+		  self.objProtocol.addListener({
+		        "message": this.onMsg
+		    })
+		  self.objProtocol.subscribe({
+		        channels: [self.objConfig.channel] 
+		    });
+	      self.state = 'connected';
+	   },stop: function(){
+		  self.objProtocol.unsubscribe({channel: self.objConfig.channel});
+		  self.state='disconnected';
+	   },onMsg:function(objMsg){
+		  self.state='streaming';
+		  self.fnResults(objMsg,objConfig);
+	   },onErr:function(objErr){ console.log(objErr); }
+	};
+
 	//----====|| pusher ||====----\\
+	this.pusher={
+		/*
+			https://pusher.com/docs/client_api_guide
+		*/
+		connect: function() {
+			// Only create a new connection if we don't already have an active connection
+			if (['connected', 'streaming'].indexOf(self.state) === -1) {
+				self.state='connecting';
+				self.objProtocol = new Pusher(self.objConfig.addr);
+			}
+	   },go: function(){
+		  self.objConfig.channels.forEach(function (channel) {
+			self.objProtocol.subscribe(channel);
+		  });
+		  self.objConfig.events.forEach(function (event) {
+			self.objProtocol.bind(event, function(msg) {
+				self.pusher.onMsg({
+					data: msg
+				});
+			});
+		  });
+	      self.state = 'connected';
+	   },stop: function(){
+		  self.objProtocol.disconnect();
+		  self.state='disconnected';
+	   },onMsg:function(objMsg){
+		  self.state='streaming';
+		  self.fnResults(objMsg,objConfig);
+	   },onErr:function(objErr){ console.log(objErr); }
+	};
 	//----====|| socket.io ||====----\\
 	//----====|| sockjs ||====----\\
 	//----====|| json stream node ||====----\\
