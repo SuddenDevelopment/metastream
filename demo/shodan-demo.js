@@ -7,7 +7,7 @@ const metastream = require('../index.js');
     type: "shodan", 
     channel: "banners",
     addr: "https://stream.shodan.io/shodan/banners",
-    appKey: "0ZM3HtWOz5qGkQPZL8SjSuaj7IIearmT",
+    appKey: "znDijk0yQApWZPhmmwd6jFLbVJRejApv",
     fnResults: function(objMsg){
       console.log('.');
     }
