@@ -5,9 +5,27 @@ const metastream = require('../index.js');
   const TIMEOUT = 30000;
  
   // Initializes the Shodan metastream
+  /*
   var objStream = new metastream({
     type: "tail",
-    path: "/tmp/tail.txt"
+    path: "/tmp/tail.txt",
+    format: "json"
+  });
+    var objStream = new metastream({
+    type: "tail",
+    path: "/tmp/tail.txt",
+    format: "delimited",
+    pattern: ",",
+    fields: ""
+  });
+  */
+
+  var objStream = new metastream({
+    type: "tail",
+    path: "/tmp/tail.txt",
+    format: "regex",
+    pattern: '(\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}),(\\d{1,4}) (\\[\\S{1,}\\]) (\\w{1,}) (\\S{1,})',
+    fields: "timestamp,procId,thread,type,class,details"
   });
 
   // Starts the Shodan stream. This creates the connection and immediately starts streaming records.
