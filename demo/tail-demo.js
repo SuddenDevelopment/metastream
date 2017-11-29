@@ -24,7 +24,7 @@ const metastream = require('../index.js');
     type: "tail",
     path: "/tmp/tail.txt",
     format: "regex",
-    pattern: '(\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}),(\\d{1,4}) (\\[\\S{1,}\\]) (\\w{1,}) (\\S{1,})',
+    pattern: '(\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}),(\\d{1,4}) (\\[\\S{1,}\\]) (\\w{1,}) (\\S{1,}):(.{1,})',
     fields: "timestamp,procId,thread,type,class,details"
   });
 

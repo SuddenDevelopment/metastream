@@ -242,6 +242,9 @@ var metastream = function(objConfig){
 
         self.objProtocol = new Tail({
             path: self.objConfig.path,
+            format: self.objConfig.format,
+            pattern: self.objConfig.pattern,
+            fields: self.objConfig.fields,
             onMessage: this.onMsg
         });
       }
